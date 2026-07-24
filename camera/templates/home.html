@@ -2,11 +2,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Object Detection</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  <meta charset="UTF-8">
+  <title>Object Detection</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
 </head>
 <body>
+	<video id="video" autoplay playsinline></video>
+  <canvas id="canvas" style="display: none;"></canvas>
 
+	<script src="{% static 'js/camera.js' %}"></script>
 </body>
 </html>
