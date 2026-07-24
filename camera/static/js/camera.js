@@ -1,6 +1,15 @@
 const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const canvasContext = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const overlayContext = overlay.getContext('2d');
 
 video.addEventListener('loadedmetadata', () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+
     setInterval(() => {
         captureFrame();
     }, 100);
@@ -13,14 +22,8 @@ async function startCamera() {
 
 startCamera();
 
-const canvas = document.getElementById('canvas');
-const context = canvas.getContext('2d');
-
 function captureFrame() {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
     
     canvas.toBlob(async (blob) => {
         if (!blob) return;
@@ -41,7 +44,19 @@ function captureFrame() {
         }
         
         const data = await response.json();
-        console.log(data);
+        overlayContext.clearRect(0, 0, canvas.width, canvas.height);
+        for (const detection of data.detections) {
+            const width = detection.x2 - detection.x1;
+            const height = detection.y2 - detection.y1;
+
+            overlayContext.strokeStyle = 'red';
+            overlayContext.lineWidth = 2;
+            overlayContext.strokeRect(detection.x1, detection.y1, width, height);
+
+            overlayContext.fillStyle = 'red';
+            overlayContext.font = '18px Arial';
+            overlayContext.fillText(`${detection.class} ${detection.conf}`, detection.x1, detection.y1 - 5);
+        }
     });
 }
 

@@ -29,7 +29,7 @@ def capture(request):
                     label = model.names[cls_id]
                     detections.append({
                         'class': label,
-                        'conf': float(box.conf[0]),
+                        'conf': round(float(box.conf[0]), 3),
                         'x1': x1,
                         'y1': y1,
                         'x2': x2,

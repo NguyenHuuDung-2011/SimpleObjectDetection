@@ -7,9 +7,12 @@
   <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
 </head>
 <body>
-	<video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display: none;"></canvas>
-
-	<script src="{% static 'js/camera.js' %}"></script>
+  <div id="camera-container">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" hidden></canvas>
+    <canvas id="overlay"></canvas>
+  </div>
+  
+  <script src="{% static 'js/camera.js' %}"></script>
 </body>
 </html>
