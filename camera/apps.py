@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class VisioneyeConfig(AppConfig):
-    name = 'visioneye'
+class CameraConfig(AppConfig):
+    name = 'camera'
