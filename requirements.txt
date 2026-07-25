@@ -39,6 +39,7 @@ pycparser==3.0
 pyOpenSSL==26.3.0
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
 PyYAML==6.0.3
 requests==2.34.2
 service-identity==26.1.0
