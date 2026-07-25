@@ -20,6 +20,18 @@ async function startCamera() {
 
 startCamera();
 
+const socket = new WebSocket('ws://127.0.0.1:8000/ws/camera/');
+socket.onopen = () => {
+    console.log('WebSocket connection established');
+}
+socket.onclose = () => {
+    console.log('WebSocket connection closed');
+}
+
+socket.onerror = (error) => {
+    console.error(error);
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
