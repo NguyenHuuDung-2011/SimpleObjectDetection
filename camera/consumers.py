@@ -37,5 +37,4 @@ class CameraConsumer(AsyncWebsocketConsumer):
                         'height': y2 - y1
                     })
 
-        print(f"Detections: {detections}")
         await self.send(text_data=json.dumps({'detections': detections}))
