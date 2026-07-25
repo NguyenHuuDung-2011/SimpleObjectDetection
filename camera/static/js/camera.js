@@ -23,11 +23,16 @@ startCamera();
 const socket = new WebSocket('ws://127.0.0.1:8000/ws/camera/');
 socket.onopen = () => {
     console.log('WebSocket connection established');
+    socket.send("Hello VisionEye");
 }
 socket.onclose = () => {
     console.log('WebSocket connection closed');
 }
-
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    drawDetections(data.detections);
+    startDetectionLoop();
+}
 socket.onerror = (error) => {
     console.error(error);
 }
@@ -48,11 +53,9 @@ function getCookie(name) {
 }
 
 async function startDetectionLoop() {
-    while (true) {
-        const blob = await captureFrame();
-        const data = await sendFrame(blob);
-        drawDetections(data.detections);
-    }
+    if (socket.readyState !== WebSocket.OPEN) return;
+    const blob = await captureFrame();
+    socket.send(blob);
 }
 
 function captureFrame() {
@@ -63,22 +66,6 @@ function captureFrame() {
             resolve(blob);
         });
     });
-}
-
-async function sendFrame(blob) {
-    if (!blob) return;
-    
-    const formData = new FormData();
-    formData.append('image', blob, 'frame.png');
-    
-    const response = await fetch('/api/frame', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: formData
-    });
-    return response.json();
 }
 
 function drawDetections(detections) {
