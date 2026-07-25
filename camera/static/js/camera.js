@@ -20,7 +20,9 @@ async function startCamera() {
 
 startCamera();
 
-const socket = new WebSocket('ws://127.0.0.1:8000/ws/camera/');
+const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+const socket = new WebSocket(`${protocol}//${window.location.host}/ws/camera/`);
+
 socket.onopen = () => {
     console.log('WebSocket connection established');
     socket.send("Hello VisionEye");
