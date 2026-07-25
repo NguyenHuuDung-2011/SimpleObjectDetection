@@ -28,15 +28,14 @@ def capture(request):
                     cls_id = int(box.cls[0])
                     label = model.names[cls_id]
                     detections.append({
-                        'class': label,
+                        'label': label,
                         'conf': round(float(box.conf[0]), 3),
-                        'x1': x1,
-                        'y1': y1,
-                        'x2': x2,
-                        'y2': y2
+                        'x': x1,
+                        'y': y1,
+                        'width': x2 - x1,
+                        'height': y2 - y1
                     })
 
     return JsonResponse({
-        'detections': detections,
-        'status': 'ok'
+        'detections': detections
     })

@@ -9,10 +9,8 @@ video.addEventListener('loadedmetadata', () => {
     canvas.height = video.videoHeight;
     overlay.width = video.videoWidth;
     overlay.height = video.videoHeight;
-
-    setInterval(() => {
-        captureFrame();
-    }, 100);
+    
+    startDetectionLoop();
 });
 
 async function startCamera() {
@@ -21,44 +19,6 @@ async function startCamera() {
 }
 
 startCamera();
-
-function captureFrame() {
-    canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        
-        const formData = new FormData();
-        formData.append('image', blob, 'frame.png');
-        
-        const response = await fetch('/api/frame', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: formData
-        });
-        if (!response.ok) {
-            console.error(response.status);
-            return;
-        }
-        
-        const data = await response.json();
-        overlayContext.clearRect(0, 0, canvas.width, canvas.height);
-        for (const detection of data.detections) {
-            const width = detection.x2 - detection.x1;
-            const height = detection.y2 - detection.y1;
-
-            overlayContext.strokeStyle = 'red';
-            overlayContext.lineWidth = 2;
-            overlayContext.strokeRect(detection.x1, detection.y1, width, height);
-
-            overlayContext.fillStyle = 'red';
-            overlayContext.font = '18px Arial';
-            overlayContext.fillText(`${detection.class} ${detection.conf}`, detection.x1, detection.y1 - 5);
-        }
-    });
-}
 
 function getCookie(name) {
     let cookieValue = null;
@@ -73,4 +33,52 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+async function startDetectionLoop() {
+    while (true) {
+        const blob = await captureFrame();
+        const data = await sendFrame(blob);
+        drawDetections(data.detections);
+    }
+}
+
+function captureFrame() {
+    canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        });
+    });
+}
+
+async function sendFrame(blob) {
+    if (!blob) return;
+    
+    const formData = new FormData();
+    formData.append('image', blob, 'frame.png');
+    
+    const response = await fetch('/api/frame', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+    });
+    return response.json();
+}
+
+function drawDetections(detections) {
+    overlayContext.clearRect(0, 0, canvas.width, canvas.height);
+    for (const detection of detections) {
+        
+        overlayContext.strokeStyle = 'red';
+        overlayContext.lineWidth = 2;
+        overlayContext.strokeRect(detection.x, detection.y, detection.width, detection.height);
+        
+        overlayContext.fillStyle = 'red';
+        overlayContext.font = '18px Arial';
+        overlayContext.fillText(`${detection.label} ${detection.conf}`, detection.x, detection.y - 5);
+    }
 }
