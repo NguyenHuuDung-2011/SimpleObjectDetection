@@ -39,22 +39,36 @@ def run_detection(bytes_data):
 class CameraConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         print("Client connected")
+        self.processing_task = None
+        self.processing = False
         await self.accept()
 
     async def disconnect(self, close_code):
         print("Client disconnected")
+        if self.processing_task is not None and not self.processing_task.done():
+            self.processing_task.cancel()
 
     async def receive(self, text_data=None, bytes_data=None):
-        detections = []
         if text_data:
             print(text_data)
-        if bytes_data:
-            print(f"Received binary frame: {len(bytes_data)} bytes")
-            try:
-                detections = await asyncio.to_thread(run_detection, bytes_data)
-                print(f"Detected {len(detections)} objects")
-            except Exception as exc:
-                print(f"Detection error: {exc}")
 
-        await self.send(text_data=json.dumps({'detections': detections}))
+        if bytes_data and not self.processing:
+            self.processing = True
+            self.processing_task = asyncio.create_task(self.handle_frame(bytes_data))
+
+    async def handle_frame(self, bytes_data):
+        detections = []
+        try:
+            detections = await asyncio.to_thread(run_detection, bytes_data)
+            await self.send(text_data=json.dumps({'detections': detections}))
+        except asyncio.CancelledError:
+            print("Frame processing task cancelled")
+        except Exception as exc:
+            print(f"Detection error: {exc}")
+            try:
+                await self.send(text_data=json.dumps({'detections': []}))
+            except Exception:
+                pass
+        finally:
+            self.processing = False
 
