@@ -8,9 +8,15 @@ from ultralytics import YOLO
 model = YOLO('yolo11n.pt')
 
 def run_detection(bytes_data):
-    image = np.frombuffer(bytes_data, dtype=np.uint8)
+    try:
+        image_data = bytes(bytes_data)
+    except Exception:
+        image_data = bytes(np.frombuffer(bytes_data, dtype=np.uint8))
+
+    image = np.frombuffer(image_data, dtype=np.uint8)
     frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
     if frame is None:
+        print('run_detection: failed to decode image frame')
         return []
 
     detections = []
@@ -43,8 +49,10 @@ class CameraConsumer(AsyncWebsocketConsumer):
         if text_data:
             print(text_data)
         if bytes_data:
+            print(f"Received binary frame: {len(bytes_data)} bytes")
             try:
                 detections = await asyncio.to_thread(run_detection, bytes_data)
+                print(f"Detected {len(detections)} objects")
             except Exception as exc:
                 print(f"Detection error: {exc}")
 

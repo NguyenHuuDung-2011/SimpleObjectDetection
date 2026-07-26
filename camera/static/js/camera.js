@@ -3,16 +3,21 @@ const canvas = document.getElementById('canvas');
 const canvasContext = canvas.getContext('2d');
 const overlay = document.getElementById('overlay');
 const overlayContext = overlay.getContext('2d');
-const stateElement = document.getElementById('state');
 
 let socketReady = false;
 let videoReady = false;
+let scaleX = 1;
+let scaleY = 1;
 
 video.addEventListener('loadedmetadata', () => {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const captureWidth = 320;
+    const captureHeight = Math.round(video.videoHeight * captureWidth / video.videoWidth);
+    canvas.width = captureWidth;
+    canvas.height = captureHeight;
     overlay.width = video.videoWidth;
     overlay.height = video.videoHeight;
+    scaleX = video.videoWidth / captureWidth;
+    scaleY = video.videoHeight / captureHeight;
     videoReady = true;
 
     if (socketReady) {
@@ -23,16 +28,23 @@ video.addEventListener('loadedmetadata', () => {
 async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = stream;
+    try {
+        await video.play();
+    } catch (err) {
+        console.warn('Video playback was prevented:', err);
+    }
 }
 
 startCamera();
 
 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 const socket = new WebSocket(`${protocol}//${window.location.host}/ws/camera/`);
+socket.binaryType = 'arraybuffer';
 
 socket.onopen = () => {
     console.log('WebSocket connection established');
     socketReady = true;
+    socket.send("Hello VisionEye");
 
     if (videoReady) {
         startDetectionLoop();
@@ -52,19 +64,15 @@ socket.onerror = (error) => {
 }
 
 async function startDetectionLoop() {
-    if (socket.readyState !== WebSocket.OPEN || !videoReady) {
-        stateElement.innerText = 'Waiting for WebSocket connection or video to be ready...';
-        stateElement.style.color = 'red';
+    if (socket.readyState !== WebSocket.OPEN || !videoReady) return;
+    const blob = await captureFrame();
+    if (!blob) {
+        console.warn('Failed to capture frame');
         return;
     }
-
-    stateElement.innerText = 'Ready up!';
-    stateElement.style.color = 'green';
-
-    const blob = await captureFrame();
-    if (blob) {
-        socket.send(blob);
-    }
+    const buffer = await blob.arrayBuffer();
+    console.log('Sending frame', buffer.byteLength, 'bytes');
+    socket.send(buffer);
 }
 
 function getCookie(name) {
@@ -88,20 +96,24 @@ function captureFrame() {
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
             resolve(blob);
-        }, 'image/jpeg', 0.7);
+        }, 'image/jpeg', 0.6);
     });
 }
 
 function drawDetections(detections) {
-    overlayContext.clearRect(0, 0, canvas.width, canvas.height);
+    overlayContext.clearRect(0, 0, overlay.width, overlay.height);
     for (const detection of detections) {
+        const x = detection.x * scaleX;
+        const y = detection.y * scaleY;
+        const width = detection.width * scaleX;
+        const height = detection.height * scaleY;
         
         overlayContext.strokeStyle = 'red';
         overlayContext.lineWidth = 2;
-        overlayContext.strokeRect(detection.x, detection.y, detection.width, detection.height);
+        overlayContext.strokeRect(x, y, width, height);
         
         overlayContext.fillStyle = 'red';
         overlayContext.font = '18px Arial';
-        overlayContext.fillText(`${detection.label} ${detection.conf}`, detection.x, detection.y - 5);
+        overlayContext.fillText(`${detection.label} ${detection.conf}`, x, y - 5);
     }
 }
